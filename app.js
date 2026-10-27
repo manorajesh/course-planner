@@ -296,17 +296,22 @@ function programProgress(program){
   // explicit target of 0 (e.g. a prerequisite that doesn't count toward the major's own
   // units) is excluded from both sides; a category with no target at all (null) still adds
   // whatever's been earned to the numerator, since there's nothing to cap it against.
-  let unitsEarned = 0, unitsTarget = 0;
+  // unitsTaken is the same calculation counting only taken courses (unitsEarned includes planned ones).
+  let unitsEarned = 0, unitsTaken = 0, unitsTarget = 0;
   for(const {category} of allCategories(program)){
     const prog = categoryProgress(program, category);
+    const taken = prog.assigned.filter(c=>c.status==="taken").reduce((s,c)=>s+(Number(c.units)||0),0);
     if(category.targetUnits != null){
       unitsTarget += category.targetUnits;
       unitsEarned += Math.min(prog.unitsEarned, category.targetUnits);
+      unitsTaken += Math.min(taken, category.targetUnits);
     } else {
       unitsEarned += prog.unitsEarned;
+      unitsTaken += taken;
     }
   }
-  return {unitsEarned, unitsTarget, pct: unitsTarget ? Math.min(100, Math.round(unitsEarned/unitsTarget*100)) : 0};
+  const pctOf = u => unitsTarget ? Math.min(100, Math.round(u/unitsTarget*100)) : 0;
+  return {unitsEarned, unitsTaken, unitsTarget, pct: pctOf(unitsEarned), takenPct: pctOf(unitsTaken)};
 }
 function setAssignment(courseId, programId, categoryId){
   const scenario = activeScenario();
@@ -396,10 +401,14 @@ function render(){
 }
 function renderHeader(){
   const bcsa = findProgram("bcsa");
-  let pct = 0, earned = 0, target = 380;
-  if(bcsa){ const pp = programProgress(bcsa); pct = pp.pct; earned = pp.unitsEarned; target = pp.unitsTarget; }
-  document.getElementById("overallBarFill").style.width = pct + "%";
-  document.getElementById("overallText").textContent = `${fmtUnits(earned)} / ${fmtUnits(target)} units toward BCSA degree (${pct}%)`;
+  let pct = 0, takenPct = 0, earned = 0, taken = 0, target = 380;
+  if(bcsa){ const pp = programProgress(bcsa); ({pct, takenPct, unitsEarned: earned, unitsTaken: taken, unitsTarget: target} = pp); }
+  document.getElementById("overallBarFill").style.width = takenPct + "%";
+  document.getElementById("overallBarPlanned").style.width = (pct - takenPct) + "%";
+  const planned = earned - taken;
+  document.getElementById("overallText").textContent =
+    `${fmtUnits(taken)} / ${fmtUnits(target)} units completed toward BCSA degree (${takenPct}%)` +
+    (planned > 0 ? ` · +${fmtUnits(planned)} planned (${pct}% with planned)` : "");
   const sel = document.getElementById("scenarioSwitcher");
   if(sel){
     sel.innerHTML = state.scenarios.map(s=>
@@ -527,7 +536,7 @@ function renderCourseRow(course){
     </div>
     <div class="course-row-meta">
       <span class="course-units">${fmtUnits(course.units)} units</span>
-      <span class="status-badge status-${course.status}">${course.status}</span>
+      <button class="status-badge status-${course.status} status-toggle" data-action="toggleStatus" data-id="${course.id}" title="Click to mark as ${course.status==="taken"?"planned":"taken"}">${course.status} ⇄</button>
       <span class="muted">${escapeHtml(course.semester||"")}</span>
       <button class="icon-btn" title="Edit" data-action="editCourse" data-id="${course.id}">✏️</button>
       <button class="icon-btn" title="Delete" data-action="deleteCourse" data-id="${course.id}">🗑️</button>
@@ -793,6 +802,12 @@ document.addEventListener("click", e=>{
   const action = t.dataset.action;
   switch(action){
     case "addCourse": { handleAddCourse(); break; }
+    case "toggleStatus": {
+      const c = findCourse(t.dataset.id); if(!c) return;
+      c.status = c.status==="taken" ? "planned" : "taken";
+      saveState(); render();
+      break;
+    }
     case "autoAssign": {
       const made = autoAssignCourses(state.courses.filter(courseIsRelevant));
       render();
