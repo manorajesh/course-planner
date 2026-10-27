@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BXA Degree Planner — CS + Art</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>BXA Degree Planner — Computer Science + Art</h1>
+  <div class="sub">Tracks the real BCSA requirements (CMU catalog, 2024–2025 edition) since Stellic's is years out of date. Everything below is editable.</div>
+  <div class="scenario-switcher">
+    <label for="scenarioSwitcher">Viewing:</label>
+    <select id="scenarioSwitcher" data-action="switchScenarioQuick"></select>
+  </div>
+  <div class="overall-bar-wrap"><div class="overall-bar-fill" id="overallBarFill" style="width:0%"></div></div>
+  <div class="overall-text" id="overallText">0 / 380 units toward BCSA degree</div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="courses" class="active">My Courses</button>
+  <button data-tab="requirements">Requirements</button>
+  <button data-tab="programs">Programs &amp; Minors</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="toast" id="toast"></div>
+
+<script src="database.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Personal data: transcripts and planner exports
+*.pdf
+*.json
+
+.DS_Store
+.vscode/
